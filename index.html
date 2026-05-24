@@ -122,13 +122,28 @@
 
   /* EDIT */
   .edit-screen{padding:0 20px;min-height:100%}
-  .car-edit-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)}
+  .car-edit-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)}
   .car-edit-row:last-child{border-bottom:none}
-  .car-edit-name{font-size:16px;font-weight:500}
-  .car-edit-pts{display:flex;align-items:center;gap:12px}
-  .pts-btn{background:var(--bg3);border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:var(--radius-sm);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .car-edit-name{font-size:15px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .car-edit-pts{display:flex;align-items:center;gap:8px;flex-shrink:0}
+  .pts-btn{background:var(--bg3);border:1px solid var(--border);color:var(--text);width:34px;height:34px;border-radius:var(--radius-sm);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
   .pts-btn:active{opacity:0.7}
-  .pts-val{font-size:18px;font-weight:700;min-width:28px;text-align:center;color:var(--gold)}
+  .pts-val{font-size:17px;font-weight:700;min-width:24px;text-align:center;color:var(--gold)}
+  .del-btn{background:rgba(224,82,82,0.08);border:1px solid rgba(224,82,82,0.2);color:var(--red);width:34px;height:34px;border-radius:var(--radius-sm);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .del-btn:active{opacity:0.7}
+  .add-car-block{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:20px;margin-bottom:8px}
+  .add-car-block .section-label{margin-bottom:12px}
+  .add-car-row{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+  .add-car-row input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:15px;padding:12px 14px;outline:none;font-family:var(--font)}
+  .add-car-row input::placeholder{color:var(--text3)}
+  .add-car-row input:focus{border-color:var(--gold)}
+  .add-car-bottom{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .pts-stepper{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px}
+  .pts-stepper .lbl{font-size:13px;color:var(--text2)}
+  .pts-stepper .pts-val{font-size:15px;min-width:20px}
+  .special-toggle{display:flex;align-items:center;gap:8px;cursor:pointer;margin-left:auto}
+  .special-toggle input[type=checkbox]{width:18px;height:18px;accent-color:var(--gold);cursor:pointer;flex-shrink:0}
+  .special-toggle label{font-size:13px;color:var(--text2);cursor:pointer;white-space:nowrap}
 
   /* END GAME MODAL */
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:flex-end;z-index:100;animation:fade-in 0.2s}
@@ -545,23 +560,70 @@ screens.leaderboard = () => {
 screens.edit = () => {
   const div = el('div','edit-screen screen');
   div.appendChild(navBar('Edit Cars',()=>{save();state.screen='home';render()}));
-  const lbl=el('p','section-label'); lbl.textContent='Points per car'; div.appendChild(lbl);
-  state.cars.forEach(car=>{
+
+  const lbl=el('p','section-label'); lbl.textContent='Cars & points'; div.appendChild(lbl);
+
+  state.cars.forEach((car,i)=>{
     const row=el('div','car-edit-row');
     const nm=el('span','car-edit-name'); nm.textContent=car.name+(car.special?' ⭐':'');
     const ptsRow=el('div','car-edit-pts');
-    const minus=el('button','pts-btn'); minus.textContent='−'; minus.onclick=()=>{if(car.pts>1)car.pts--;render()};
+    const minus=el('button','pts-btn'); minus.textContent='−'; minus.onclick=()=>{if(car.pts>1){car.pts--;render()}};
     const val=el('span','pts-val'); val.textContent=car.pts;
     const plus=el('button','pts-btn'); plus.textContent='+'; plus.onclick=()=>{car.pts++;render()};
     const specToggle=el('button','pts-btn'); specToggle.textContent='⭐'; specToggle.title='Toggle special';
-    specToggle.style.cssText='width:auto;padding:0 10px;font-size:14px;'+(car.special?'background:rgba(232,184,75,0.2);border-color:var(--gold)':'');
+    specToggle.style.cssText='width:auto;padding:0 10px;font-size:13px;'+(car.special?'background:rgba(232,184,75,0.2);border-color:var(--gold)':'');
     specToggle.onclick=()=>{car.special=!car.special;render()};
+    const delB=el('button','del-btn'); delB.textContent='✕'; delB.title='Remove car';
+    delB.onclick=()=>{
+      if(!confirm('Remove '+car.name+'?'))return;
+      state.cars.splice(i,1); save(); render();
+    };
     ptsRow.appendChild(minus); ptsRow.appendChild(val); ptsRow.appendChild(plus); ptsRow.appendChild(specToggle);
-    row.appendChild(nm); row.appendChild(ptsRow);
+    row.appendChild(nm); row.appendChild(ptsRow); row.appendChild(delB);
     div.appendChild(row);
   });
-  const savBtn=btn('Save & Back','btn-primary',()=>{save();state.screen='home';render()});
-  savBtn.style.cssText='margin-top:20px;margin-bottom:32px;width:100%';
+
+  // ── Add new car block ──
+  const block=el('div','add-car-block');
+  const addLbl=el('p','section-label'); addLbl.textContent='Add a new car'; block.appendChild(addLbl);
+
+  // name input row
+  const nameRow=el('div','add-car-row');
+  const nameInp=el('input'); nameInp.type='text'; nameInp.placeholder='Car name (e.g. Jaguar)';
+  nameRow.appendChild(nameInp); block.appendChild(nameRow);
+
+  // pts stepper + special toggle row
+  const bottomRow=el('div','add-car-bottom');
+  const stepper=el('div','pts-stepper');
+  const stLbl=el('span','lbl'); stLbl.textContent='Points:';
+  let newPts=1;
+  const stMinus=el('button','pts-btn'); stMinus.textContent='−'; stMinus.style.cssText='width:28px;height:28px;font-size:16px';
+  const stVal=el('span','pts-val'); stVal.textContent=newPts;
+  const stPlus=el('button','pts-btn'); stPlus.textContent='+'; stPlus.style.cssText='width:28px;height:28px;font-size:16px';
+  stMinus.onclick=()=>{if(newPts>1){newPts--;stVal.textContent=newPts}};
+  stPlus.onclick=()=>{newPts++;stVal.textContent=newPts};
+  stepper.appendChild(stLbl); stepper.appendChild(stMinus); stepper.appendChild(stVal); stepper.appendChild(stPlus);
+
+  const specWrap=el('div','special-toggle');
+  const specCb=el('input'); specCb.type='checkbox'; specCb.id='new-special';
+  const specLbl=el('label'); specLbl.htmlFor='new-special'; specLbl.textContent='⭐ Special car';
+  specWrap.appendChild(specCb); specWrap.appendChild(specLbl);
+
+  bottomRow.appendChild(stepper); bottomRow.appendChild(specWrap);
+  block.appendChild(bottomRow);
+
+  const addBtn=btn('Add Car','btn-primary',()=>{
+    const name=nameInp.value.trim();
+    if(!name)return;
+    if(state.cars.find(c=>c.name.toLowerCase()===name.toLowerCase()))return alert('A car with that name already exists!');
+    state.cars.push({id:'custom_'+Date.now(),name,pts:newPts,special:specCb.checked,inGame:false});
+    save(); render();
+  });
+  block.appendChild(addBtn);
+  div.appendChild(block);
+
+  const savBtn=btn('Save & Back','btn-secondary',()=>{save();state.screen='home';render()});
+  savBtn.style.cssText='margin-top:12px;margin-bottom:32px;width:100%';
   div.appendChild(savBtn);
   return div;
 };
