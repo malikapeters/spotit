@@ -452,14 +452,18 @@ screens.leaderboard = () => {
   const div = el('div','lb-screen screen');
   div.appendChild(navBar('Leaderboard',()=>{state.screen='home';render()}));
   const sorted=[...state.leaderboard].sort((a,b)=>b.pts-a.pts);
+
   if(!sorted.length){
     const empty=el('div','lb-empty'); empty.textContent='No games played yet. Start a new game!';
     div.appendChild(empty);
+    div.appendChild(resetBlock(div));
     return div;
   }
+
   const hero=el('div','lb-hero');
   hero.innerHTML='<h2>All-Time Rankings</h2><p>'+sorted.length+' player'+(sorted.length>1?'s':'')+' · never resets</p>';
   div.appendChild(hero);
+
   sorted.forEach((p,i)=>{
     const cls='lb-entry'+(i===0?' first':i===1?' second':i===2?' third':'');
     const row=el('div',cls);
@@ -471,8 +475,72 @@ screens.leaderboard = () => {
     row.appendChild(rankEl); row.appendChild(info); row.appendChild(ptsEl);
     div.appendChild(row);
   });
+
+  div.appendChild(resetBlock(div));
   return div;
 };
+
+function resetBlock(parentDiv){
+  const wrap = el('div');
+  wrap.style.cssText='padding:28px 0 36px';
+
+  // collapsed state — just a subtle reset button
+  const triggerBtn = el('button','btn-secondary btn-danger');
+  triggerBtn.textContent='Reset Leaderboard';
+  triggerBtn.style.cssText='width:100%;font-size:14px;padding:14px';
+  wrap.appendChild(triggerBtn);
+
+  // auth panel (hidden initially)
+  const panel = el('div');
+  panel.style.cssText='display:none;background:var(--bg2);border:1px solid rgba(224,82,82,0.2);border-radius:var(--radius);padding:20px;margin-top:12px';
+  panel.innerHTML=`
+    <p style="font-size:15px;font-weight:700;margin-bottom:4px;color:var(--text)">Admin only</p>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Enter your name and password to reset all scores.</p>
+    <input id="reset-name" type="text" placeholder="Your name" autocomplete="off"
+      style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:15px;padding:12px 14px;outline:none;font-family:var(--font);margin-bottom:10px;display:block"/>
+    <input id="reset-pass" type="password" placeholder="Password"
+      style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:15px;padding:12px 14px;outline:none;font-family:var(--font);margin-bottom:14px;display:block"/>
+    <div id="reset-err" style="color:var(--red);font-size:13px;margin-bottom:10px;display:none">Incorrect name or password.</div>
+  `;
+
+  const confirmBtn = el('button','btn-primary');
+  confirmBtn.textContent='Confirm Reset';
+  confirmBtn.style.cssText='width:100%;background:var(--red);margin-bottom:8px';
+  const cancelBtn = el('button','btn-secondary');
+  cancelBtn.textContent='Cancel';
+  cancelBtn.style.cssText='width:100%';
+
+  panel.appendChild(confirmBtn);
+  panel.appendChild(cancelBtn);
+  wrap.appendChild(panel);
+
+  triggerBtn.onclick=()=>{
+    panel.style.display='block';
+    triggerBtn.style.display='none';
+    setTimeout(()=>document.getElementById('reset-name')?.focus(),50);
+  };
+  cancelBtn.onclick=()=>{
+    panel.style.display='none';
+    triggerBtn.style.display='block';
+    document.getElementById('reset-err').style.display='none';
+  };
+  confirmBtn.onclick=()=>{
+    const name=(document.getElementById('reset-name').value||'').trim().toLowerCase();
+    const pass=(document.getElementById('reset-pass').value||'').trim();
+    const errEl=document.getElementById('reset-err');
+    if(name==='malika' && pass==='1126'){
+      if(!confirm('Are you sure, Malika? This will permanently delete all leaderboard scores.'))return;
+      state.leaderboard=[];
+      save();
+      render();
+    } else {
+      errEl.style.display='block';
+      document.getElementById('reset-pass').value='';
+      document.getElementById('reset-pass').focus();
+    }
+  };
+  return wrap;
+}
 
 // ─── EDIT ─────────────────────────────────────────────────────────────────────
 screens.edit = () => {
