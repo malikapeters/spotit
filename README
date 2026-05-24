@@ -1,0 +1,97 @@
+# SpotIt — Car Spotter App
+
+## What's in the box
+- `index.html` — the entire app (no build step, no dependencies)
+- `manifest.json` — makes it installable as a PWA on iPhones
+- `README.md` — this file
+
+---
+
+## How to deploy so everyone can install it on their iPhone
+
+The easiest free option is **GitHub Pages** (no server needed, no monthly fees).
+
+### Option A: GitHub Pages (Free, Recommended)
+
+1. **Create a free GitHub account** at https://github.com if you don't have one.
+
+2. **Create a new repository**
+   - Click the `+` icon → New repository
+   - Name it `spotit` (or anything you like)
+   - Set it to **Public**
+   - Click **Create repository**
+
+3. **Upload the files**
+   - Click **Add file → Upload files**
+   - Drag `index.html` and `manifest.json` into the upload area
+   - Click **Commit changes**
+
+4. **Enable GitHub Pages**
+   - Go to **Settings → Pages**
+   - Under **Source**, select `Deploy from a branch`
+   - Branch: `main`, Folder: `/ (root)`
+   - Click **Save**
+
+5. **Your app URL will be:**
+   `https://YOUR-USERNAME.github.io/spotit/`
+   (GitHub will show you the exact URL in the Pages settings)
+
+6. **Share the URL** with your nephews. Everyone opens it in Safari on iPhone.
+
+---
+
+### How each person installs it on their iPhone
+
+1. Open the link in **Safari** (must be Safari, not Chrome)
+2. Tap the **Share** button (the box with an arrow at the bottom)
+3. Scroll down and tap **"Add to Home Screen"**
+4. Name it `SpotIt` and tap **Add**
+
+It now works like a real app — full screen, no browser bar, no internet needed once loaded!
+
+---
+
+### Option B: Netlify (also free, slightly easier)
+
+1. Go to https://app.netlify.com → Sign up free
+2. Drag and drop the `car-spotter` folder onto the Netlify dashboard
+3. It gives you a URL instantly (e.g. `https://spotit-xyz.netlify.app`)
+4. Share that URL — same install steps as above
+
+---
+
+## Data & Privacy
+
+- All game data is saved **locally on each device** using browser storage
+- Nothing is sent to any server
+- The leaderboard is per-device (each phone keeps its own cumulative scores)
+- If you want a shared leaderboard across all devices, you'd need a backend — ask me and I can build that version
+
+---
+
+## Customising cars
+
+Tap **Edit Cars & Points** on the home screen to:
+- Change the points value of any car
+- Toggle whether a car counts as a "special" (⭐ gives bonus points)
+
+Changes are saved automatically to the device.
+
+---
+
+## Default cars & points
+
+| Car | Points | Special? |
+|-----|--------|----------|
+| Porsche | 3 | ⭐ Yes |
+| Ferrari | 3 | ⭐ Yes |
+| Lamborghini | 3 | ⭐ Yes |
+| McLaren | 3 | ⭐ Yes |
+| Aston Martin | 3 | ⭐ Yes |
+| Bentley | 2 | No |
+| Maserati | 2 | No |
+| Mercedes AMG | 2 | No |
+| BMW | 1 | No |
+| Audi | 1 | No |
+| Golf GTI | 1 | No |
+| Mercedes | 1 | No |
