@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="SpotIt"/>
+<meta name="theme-color" content="#0f0f0f"/>
+<title>SpotIt — Car Spotter</title>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icon-192.png"/>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  :root{
+    --bg:#0f0f0f;--bg2:#1a1a1a;--bg3:#242424;--bg4:#2e2e2e;
+    --text:#f0ede6;--text2:#a09d95;--text3:#6b6762;
+    --gold:#e8b84b;--gold2:#c49a30;--gold3:#f5d07a;
+    --red:#e05252;--red2:#c03c3c;
+    --green:#52c472;--green2:#3aa058;
+    --blue:#5289e0;
+    --border:rgba(255,255,255,0.08);
+    --radius:14px;--radius-sm:8px;
+    --font:'SF Pro Display',-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;
+  }
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);overflow:hidden}
+  #root{height:100%;display:flex;flex-direction:column}
+  .screen{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:0 0 env(safe-area-inset-bottom,24px)}
+  .screen::-webkit-scrollbar{display:none}
+
+  /* HOME */
+  .home{display:flex;flex-direction:column;align-items:center;min-height:100%}
+  .home-hero{width:100%;height:52vw;max-height:260px;background:#111;position:relative;overflow:hidden;flex-shrink:0}
+  .home-hero svg{width:100%;height:100%}
+  .home-logo{padding:20px 24px 4px;width:100%}
+  .home-logo h1{font-size:32px;font-weight:700;letter-spacing:-1px;color:var(--text)}
+  .home-logo p{font-size:14px;color:var(--text2);margin-top:4px;letter-spacing:0.2px}
+  .home-btns{padding:20px 24px 0;width:100%;display:flex;flex-direction:column;gap:12px}
+  .btn-primary{width:100%;padding:18px;background:var(--gold);color:#0f0f0f;border:none;border-radius:var(--radius);font-size:17px;font-weight:700;letter-spacing:0.2px;cursor:pointer;transition:transform 0.12s,opacity 0.12s}
+  .btn-primary:active{transform:scale(0.97);opacity:0.85}
+  .btn-secondary{width:100%;padding:18px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);font-size:17px;font-weight:600;cursor:pointer;transition:transform 0.12s,background 0.12s}
+  .btn-secondary:active{transform:scale(0.97);background:var(--bg4)}
+  .btn-danger{background:rgba(224,82,82,0.12);color:var(--red);border:1px solid rgba(224,82,82,0.2)}
+
+  /* SETUP */
+  .setup{padding:0 24px;min-height:100%}
+  .nav-bar{display:flex;align-items:center;padding:14px 0 20px;gap:12px}
+  .nav-back{background:var(--bg3);border:none;color:var(--text);font-size:16px;font-weight:500;padding:10px 16px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .nav-back:active{opacity:0.7}
+  .nav-title{font-size:20px;font-weight:700;letter-spacing:-0.5px}
+  .section-label{font-size:12px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);margin-bottom:10px}
+  .player-list{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+  .player-chip{display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border-radius:var(--radius-sm);padding:14px 16px;border:1px solid var(--border)}
+  .player-chip span{font-size:16px;font-weight:500}
+  .player-chip button{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:0 4px}
+  .add-row{display:flex;gap:10px;margin-bottom:28px}
+  .add-row input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:16px;padding:14px 16px;outline:none;font-family:var(--font)}
+  .add-row input::placeholder{color:var(--text3)}
+  .add-row input:focus{border-color:var(--gold);background:var(--bg2)}
+  .add-row button{background:var(--gold);color:#0f0f0f;border:none;border-radius:var(--radius-sm);padding:14px 18px;font-size:20px;font-weight:700;cursor:pointer}
+  .car-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:28px}
+  .car-chip{padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;gap:10px;cursor:pointer;transition:border-color 0.15s,background 0.15s}
+  .car-chip.active{background:rgba(232,184,75,0.1);border-color:var(--gold)}
+  .car-chip .dot{width:10px;height:10px;border-radius:50%;background:var(--border);border:1.5px solid var(--text3);flex-shrink:0;transition:background 0.15s,border-color 0.15s}
+  .car-chip.active .dot{background:var(--gold);border-color:var(--gold)}
+  .car-chip span{font-size:14px;font-weight:500;color:var(--text2)}
+  .car-chip.active span{color:var(--text)}
+  .car-chip.special-chip{border-color:rgba(232,184,75,0.3)}
+  .car-chip.special-chip.active{background:rgba(232,184,75,0.18);border-color:var(--gold)}
+  .pts-badge{font-size:11px;color:var(--gold2);font-weight:700;margin-left:auto}
+
+  /* GAME */
+  .game-screen{padding:0 16px;min-height:100%}
+  .game-header{padding:14px 8px 12px;display:flex;justify-content:space-between;align-items:center}
+  .game-title{font-size:18px;font-weight:700}
+  .game-end-btn{background:rgba(224,82,82,0.12);border:1px solid rgba(224,82,82,0.2);color:var(--red);border-radius:var(--radius-sm);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
+  .game-end-btn:active{opacity:0.7}
+  .scoreboard{margin-bottom:16px}
+  .score-row{display:flex;align-items:center;padding:13px 16px;background:var(--bg2);border-radius:var(--radius-sm);margin-bottom:6px;border:1px solid var(--border);transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1)}
+  .score-row.leader{background:rgba(232,184,75,0.08);border-color:rgba(232,184,75,0.25)}
+  .rank{font-size:13px;font-weight:700;color:var(--text3);width:24px;flex-shrink:0}
+  .score-row.leader .rank{color:var(--gold)}
+  .score-name{flex:1;font-size:16px;font-weight:600}
+  .score-pts{font-size:22px;font-weight:800;letter-spacing:-0.5px;color:var(--gold)}
+  .score-special{font-size:11px;color:var(--text3);margin-left:10px;white-space:nowrap}
+  .special-row{font-size:13px;color:var(--text2);text-align:center;padding:6px 0 14px}
+  .special-row span{color:var(--gold);font-weight:700}
+
+  .section-divider{font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);padding:4px 8px 10px}
+  .player-btns{display:grid;gap:8px;margin-bottom:12px}
+  .player-btn{padding:16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);font-size:17px;font-weight:700;color:var(--text);cursor:pointer;text-align:center;transition:transform 0.1s,background 0.1s;position:relative;overflow:hidden}
+  .player-btn:active{transform:scale(0.96);background:var(--bg4)}
+  .player-btn .flash{position:absolute;inset:0;background:var(--green);opacity:0;border-radius:var(--radius);animation:flash-anim 0.4s forwards}
+  @keyframes flash-anim{0%{opacity:0.5}100%{opacity:0}}
+  .special-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+  .special-btn{padding:18px 12px;background:rgba(232,184,75,0.08);border:1.5px solid rgba(232,184,75,0.3);border-radius:var(--radius);cursor:pointer;text-align:center;transition:transform 0.1s}
+  .special-btn:active{transform:scale(0.96)}
+  .special-btn .car-label{font-size:15px;font-weight:700;color:var(--gold3)}
+  .special-btn .pts-label{font-size:11px;color:var(--gold2);margin-top:3px}
+  .deduct-btns{display:grid;gap:8px;margin-bottom:28px}
+  .deduct-btn{padding:13px;background:rgba(224,82,82,0.07);border:1px solid rgba(224,82,82,0.15);border-radius:var(--radius-sm);font-size:14px;font-weight:600;color:var(--red);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .deduct-btn:active{opacity:0.7}
+  .deduct-row{display:flex;align-items:center;justify-content:space-between;padding-bottom:6px}
+
+  /* LEADERBOARD */
+  .lb-screen{padding:0 20px;min-height:100%}
+  .lb-hero{background:linear-gradient(135deg,rgba(232,184,75,0.12),rgba(232,184,75,0.03));border:1px solid rgba(232,184,75,0.15);border-radius:var(--radius);padding:20px;margin-bottom:20px;text-align:center}
+  .lb-hero h2{font-size:22px;font-weight:800;letter-spacing:-0.5px;margin-bottom:4px}
+  .lb-hero p{font-size:13px;color:var(--text2)}
+  .lb-entry{display:flex;align-items:center;gap:14px;padding:16px;background:var(--bg2);border-radius:var(--radius-sm);margin-bottom:8px;border:1px solid var(--border)}
+  .lb-entry.first{background:rgba(232,184,75,0.1);border-color:rgba(232,184,75,0.3)}
+  .lb-entry.second{background:rgba(180,180,180,0.06);border-color:rgba(180,180,180,0.2)}
+  .lb-entry.third{background:rgba(196,130,50,0.07);border-color:rgba(196,130,50,0.2)}
+  .lb-rank{font-size:22px;width:36px;text-align:center;flex-shrink:0}
+  .lb-info{flex:1}
+  .lb-name{font-size:16px;font-weight:700}
+  .lb-meta{font-size:12px;color:var(--text2);margin-top:3px}
+  .lb-pts{text-align:right}
+  .lb-pts .big{font-size:26px;font-weight:800;letter-spacing:-0.5px;color:var(--gold)}
+  .lb-pts .small{font-size:11px;color:var(--text3)}
+  .lb-empty{text-align:center;padding:60px 0;color:var(--text2);font-size:15px}
+
+  /* EDIT */
+  .edit-screen{padding:0 20px;min-height:100%}
+  .car-edit-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)}
+  .car-edit-row:last-child{border-bottom:none}
+  .car-edit-name{font-size:16px;font-weight:500}
+  .car-edit-pts{display:flex;align-items:center;gap:12px}
+  .pts-btn{background:var(--bg3);border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:var(--radius-sm);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .pts-btn:active{opacity:0.7}
+  .pts-val{font-size:18px;font-weight:700;min-width:28px;text-align:center;color:var(--gold)}
+
+  /* END GAME MODAL */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:flex-end;z-index:100;animation:fade-in 0.2s}
+  @keyframes fade-in{from{opacity:0}to{opacity:1}}
+  .modal{background:var(--bg2);border-radius:24px 24px 0 0;padding:28px 24px calc(32px + env(safe-area-inset-bottom,0px));width:100%;animation:slide-up 0.3s cubic-bezier(0.34,1.2,0.64,1)}
+  @keyframes slide-up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .modal h2{font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px}
+  .modal p{font-size:14px;color:var(--text2);margin-bottom:24px}
+  .modal-winner{display:flex;flex-direction:column;align-items:center;padding:20px;background:rgba(232,184,75,0.08);border-radius:var(--radius);border:1px solid rgba(232,184,75,0.2);margin-bottom:20px}
+  .modal-winner .trophy{font-size:40px;margin-bottom:8px}
+  .modal-winner .name{font-size:22px;font-weight:800}
+  .modal-winner .pts{font-size:15px;color:var(--gold);margin-top:4px}
+  .modal-scores{display:flex;flex-direction:column;gap:6px;margin-bottom:20px}
+  .modal-score-row{display:flex;justify-content:space-between;padding:10px 14px;background:var(--bg3);border-radius:var(--radius-sm)}
+  .modal-score-row span:last-child{font-weight:700;color:var(--gold)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const DEFAULT_CARS = [
+  {id:'porsche',name:'Porsche',pts:3,special:true},
+  {id:'ferrari',name:'Ferrari',pts:3,special:true},
+  {id:'lambo',name:'Lamborghini',pts:3,special:true},
+  {id:'bmw',name:'BMW',pts:1,special:false},
+  {id:'audi',name:'Audi',pts:1,special:false},
+  {id:'golf_gti',name:'Golf GTI',pts:1,special:false},
+  {id:'mercedes',name:'Mercedes',pts:1,special:false},
+  {id:'bentley',name:'Bentley',pts:2,special:false},
+  {id:'maserati',name:'Maserati',pts:2,special:false},
+  {id:'amg',name:'Mercedes AMG',pts:2,special:false},
+  {id:'mclaren',name:'McLaren',pts:3,special:true},
+  {id:'aston',name:'Aston Martin',pts:3,special:true},
+];
+
+let state = {
+  screen: 'home', // home | setup | game | leaderboard | edit
+  cars: JSON.parse(localStorage.getItem('spotit_cars') || 'null') || DEFAULT_CARS,
+  leaderboard: JSON.parse(localStorage.getItem('spotit_lb') || '[]'),
+  // setup
+  setupPlayers: [],
+  setupInput: '',
+  // game
+  players: [], // [{name, pts, specials}]
+  gameCars: [],
+  showEndModal: false,
+  flashPlayer: null,
+};
+
+function save(){
+  localStorage.setItem('spotit_cars', JSON.stringify(state.cars));
+  localStorage.setItem('spotit_lb', JSON.stringify(state.leaderboard));
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function render(){
+  const root = document.getElementById('root');
+  root.innerHTML = '';
+  const el = screens[state.screen]();
+  root.appendChild(el);
+}
+
+// ─── HOME ─────────────────────────────────────────────────────────────────────
+screens = {};
+screens.home = () => {
+  const div = el('div','home screen');
+  div.appendChild(heroCar());
+  const logo = el('div','home-logo');
+  logo.innerHTML = '<h1>SpotIt</h1><p>The car spotting points game</p>';
+  div.appendChild(logo);
+  const btns = el('div','home-btns');
+  btns.appendChild(btn('New Game','btn-primary',()=>{
+    state.setupPlayers=[]; state.setupInput=''; state.screen='setup'; render();
+  }));
+  btns.appendChild(btn('Leaderboard','btn-secondary',()=>{state.screen='leaderboard';render()}));
+  btns.appendChild(btn('Edit Cars & Points','btn-secondary',()=>{state.screen='edit';render()}));
+  div.appendChild(btns);
+  return div;
+};
+
+function heroCar(){
+  const wrap = el('div','home-hero');
+  wrap.innerHTML = `<svg viewBox="0 0 400 210" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#0a0a0a"/>
+        <stop offset="100%" stop-color="#1c1208"/>
+      </linearGradient>
+      <linearGradient id="roadGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#151515"/>
+        <stop offset="100%" stop-color="#0a0a0a"/>
+      </linearGradient>
+      <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#e8b84b"/>
+        <stop offset="60%" stop-color="#c49a30"/>
+        <stop offset="100%" stop-color="#8a6a1a"/>
+      </linearGradient>
+      <radialGradient id="headlight" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#fff8e0" stop-opacity="0.9"/>
+        <stop offset="100%" stop-color="#e8b84b" stop-opacity="0"/>
+      </radialGradient>
+      <filter id="glow">
+        <feGaussianBlur stdDeviation="3" result="blur"/>
+        <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+      </filter>
+    </defs>
+    <!-- sky -->
+    <rect width="400" height="210" fill="url(#skyGrad)"/>
+    <!-- stars -->
+    <circle cx="30" cy="20" r="1" fill="#e8b84b" opacity="0.6"/>
+    <circle cx="80" cy="35" r="0.8" fill="#fff" opacity="0.4"/>
+    <circle cx="150" cy="15" r="1.2" fill="#fff" opacity="0.5"/>
+    <circle cx="220" cy="28" r="0.7" fill="#e8b84b" opacity="0.5"/>
+    <circle cx="310" cy="12" r="1" fill="#fff" opacity="0.4"/>
+    <circle cx="370" cy="40" r="0.8" fill="#fff" opacity="0.3"/>
+    <!-- road -->
+    <rect y="145" width="400" height="65" fill="url(#roadGrad)"/>
+    <!-- road line -->
+    <rect x="30" y="163" width="50" height="4" rx="2" fill="#e8b84b" opacity="0.25"/>
+    <rect x="140" y="163" width="50" height="4" rx="2" fill="#e8b84b" opacity="0.25"/>
+    <rect x="250" y="163" width="50" height="4" rx="2" fill="#e8b84b" opacity="0.25"/>
+    <rect x="360" y="163" width="50" height="4" rx="2" fill="#e8b84b" opacity="0.25"/>
+    <!-- car shadow -->
+    <ellipse cx="200" cy="158" rx="115" ry="8" fill="#000" opacity="0.5"/>
+    <!-- car body low -->
+    <path d="M75 148 Q80 130 100 128 L295 128 Q325 130 325 148 Z" fill="#8a6a1a"/>
+    <!-- car body main -->
+    <path d="M60 148 Q60 128 75 125 L110 100 Q140 82 175 80 L225 80 Q258 82 285 98 L330 125 Q345 128 345 148 Z" fill="url(#bodyGrad)"/>
+    <!-- windows -->
+    <path d="M115 103 L155 83 L195 81 L195 102 Z" fill="#1a2a3a" opacity="0.85"/>
+    <path d="M200 81 L240 81 L278 99 L200 102 Z" fill="#1a2a3a" opacity="0.85"/>
+    <line x1="198" y1="81" x2="198" y2="103" stroke="#c49a30" stroke-width="2"/>
+    <!-- window frame -->
+    <path d="M113 105 L152 84 L245 84 L280 101" fill="none" stroke="#c49a30" stroke-width="1.5" opacity="0.7"/>
+    <!-- door line -->
+    <line x1="198" y1="105" x2="198" y2="146" stroke="#c49a30" stroke-width="1" opacity="0.4"/>
+    <!-- headlight beam -->
+    <path d="M338 134 L400 120 L400 145 L338 140 Z" fill="url(#headlight)" opacity="0.3"/>
+    <!-- rear light glow -->
+    <ellipse cx="73" cy="137" rx="8" ry="4" fill="#e05252" opacity="0.5" filter="url(#glow)"/>
+    <!-- front headlight -->
+    <ellipse cx="333" cy="137" rx="7" ry="4" fill="#fff8e0" opacity="0.7" filter="url(#glow)"/>
+    <!-- rear lights detail -->
+    <rect x="65" y="133" width="14" height="7" rx="2" fill="#e05252" opacity="0.8"/>
+    <!-- front lights detail -->
+    <rect x="326" y="133" width="14" height="7" rx="2" fill="#fffbe0" opacity="0.9"/>
+    <!-- wheels -->
+    <circle cx="130" cy="151" r="22" fill="#0f0f0f"/>
+    <circle cx="130" cy="151" r="18" fill="#1a1a1a"/>
+    <circle cx="130" cy="151" r="12" fill="#2a2a2a"/>
+    <circle cx="130" cy="151" r="5" fill="#e8b84b"/>
+    <!-- wheel spokes -->
+    <line x1="130" y1="139" x2="130" y2="163" stroke="#444" stroke-width="2.5"/>
+    <line x1="118" y1="151" x2="142" y2="151" stroke="#444" stroke-width="2.5"/>
+    <line x1="121" y1="142" x2="139" y2="160" stroke="#444" stroke-width="2"/>
+    <line x1="121" y1="160" x2="139" y2="142" stroke="#444" stroke-width="2"/>
+    <circle cx="270" cy="151" r="22" fill="#0f0f0f"/>
+    <circle cx="270" cy="151" r="18" fill="#1a1a1a"/>
+    <circle cx="270" cy="151" r="12" fill="#2a2a2a"/>
+    <circle cx="270" cy="151" r="5" fill="#e8b84b"/>
+    <line x1="270" y1="139" x2="270" y2="163" stroke="#444" stroke-width="2.5"/>
+    <line x1="258" y1="151" x2="282" y2="151" stroke="#444" stroke-width="2.5"/>
+    <line x1="261" y1="142" x2="279" y2="160" stroke="#444" stroke-width="2"/>
+    <line x1="261" y1="160" x2="279" y2="142" stroke="#444" stroke-width="2"/>
+    <!-- side stripe -->
+    <line x1="75" y1="125" x2="325" y2="125" stroke="#c49a30" stroke-width="1.5" opacity="0.5"/>
+    <!-- logo text on car -->
+    <text x="198" y="120" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="9" font-weight="700" fill="#0f0f0f" opacity="0.6" letter-spacing="2">SPOTIT</text>
+  </svg>`;
+  return wrap;
+}
+
+// ─── SETUP ────────────────────────────────────────────────────────────────────
+screens.setup = () => {
+  const div = el('div','setup screen');
+  div.appendChild(navBar('Setup Game',()=>{state.screen='home';render()}));
+
+  const pl = el('div');
+  const lbl1 = el('p','section-label'); lbl1.textContent='Players'; pl.appendChild(lbl1);
+  const playerList = el('div','player-list');
+  state.setupPlayers.forEach((p,i)=>{
+    const chip = el('div','player-chip');
+    const nm = el('span'); nm.textContent=p;
+    const rm = el('button'); rm.textContent='✕'; rm.onclick=()=>{
+      state.setupPlayers.splice(i,1); render();
+    };
+    chip.appendChild(nm); chip.appendChild(rm);
+    playerList.appendChild(chip);
+  });
+  pl.appendChild(playerList);
+
+  const addRow = el('div','add-row');
+  const inp = el('input'); inp.type='text'; inp.placeholder='Add player name';
+  inp.value=state.setupInput;
+  inp.oninput=e=>state.setupInput=e.target.value;
+  inp.onkeydown=e=>{if(e.key==='Enter')addPlayer()};
+  const addBtn = el('button'); addBtn.textContent='+';
+  addBtn.onclick=addPlayer;
+  addRow.appendChild(inp); addRow.appendChild(addBtn);
+  pl.appendChild(addRow);
+  div.appendChild(pl);
+
+  const lbl2 = el('p','section-label'); lbl2.textContent='Cars in game'; div.appendChild(lbl2);
+  const grid = el('div','car-grid');
+  state.cars.forEach(car=>{
+    const chip = el('div','car-chip'+(car.special?' special-chip':'')+(car.inGame?' active':''));
+    const dot = el('div','dot');
+    const nm = el('span'); nm.textContent=car.name;
+    const pts = el('span','pts-badge'); pts.textContent=car.pts+'pt'+(car.pts>1?'s':'');
+    chip.appendChild(dot); chip.appendChild(nm); chip.appendChild(pts);
+    chip.onclick=()=>{car.inGame=!car.inGame; render()};
+    grid.appendChild(chip);
+  });
+  div.appendChild(grid);
+
+  const startBtn = btn('Start Game','btn-primary',startGame);
+  startBtn.style.marginBottom='32px';
+  div.appendChild(startBtn);
+  return div;
+
+  function addPlayer(){
+    const n=state.setupInput.trim();
+    if(!n)return;
+    if(state.setupPlayers.includes(n))return;
+    state.setupPlayers.push(n);
+    state.setupInput='';
+    render();
+    setTimeout(()=>{document.querySelector('.add-row input')?.focus()},50);
+  }
+  function startGame(){
+    if(state.setupPlayers.length<1)return alert('Add at least one player!');
+    if(!state.cars.some(c=>c.inGame))return alert('Select at least one car!');
+    state.players=state.setupPlayers.map(n=>({name:n,pts:0,specials:0}));
+    state.gameCars=state.cars.filter(c=>c.inGame);
+    state.screen='game'; render();
+  }
+};
+
+// ─── GAME ─────────────────────────────────────────────────────────────────────
+screens.game = () => {
+  const div = el('div','game-screen screen');
+  // header
+  const hdr = el('div','game-header');
+  const title = el('span','game-title'); title.textContent='Live Game';
+  const endBtn = el('button','game-end-btn'); endBtn.textContent='End Game';
+  endBtn.onclick=()=>{state.showEndModal=true; render()};
+  hdr.appendChild(title); hdr.appendChild(endBtn);
+  div.appendChild(hdr);
+
+  // scoreboard
+  const sorted=[...state.players].sort((a,b)=>b.pts-a.pts);
+  const sb = el('div','scoreboard');
+  sorted.forEach((p,i)=>{
+    const row = el('div','score-row'+(i===0&&p.pts>0?' leader':''));
+    const rank = el('span','rank'); rank.textContent='#'+(i+1);
+    const name = el('span','score-name'); name.textContent=p.name;
+    const pts = el('span','score-pts'); pts.textContent=p.pts;
+    const sp = el('span','score-special'); sp.textContent=p.specials>0?'⭐ '+p.specials:'';
+    row.appendChild(rank); row.appendChild(name); row.appendChild(pts); row.appendChild(sp);
+    sb.appendChild(row);
+  });
+  const totalSpecials = state.players.reduce((s,p)=>s+p.specials,0);
+  const specLine = el('div','special-row');
+  specLine.innerHTML='Special cars seen this game: <span>'+totalSpecials+'</span>';
+  sb.appendChild(specLine);
+  div.appendChild(sb);
+
+  // special cars
+  const specCars = state.gameCars.filter(c=>c.special);
+  if(specCars.length){
+    const lbl = el('p','section-divider'); lbl.textContent='⭐ Special cars'; div.appendChild(lbl);
+    const sbtn = el('div','special-btns');
+    specCars.forEach(car=>{
+      const b = el('div','special-btn');
+      b.innerHTML='<div class="car-label">'+car.name+'</div><div class="pts-label">+'+car.pts+' pts</div>';
+      b.onclick=()=>awardPlayer(car,true);
+      sbtn.appendChild(b);
+    });
+    div.appendChild(sbtn);
+  }
+
+  // regular cars
+  const regCars = state.gameCars.filter(c=>!c.special);
+  if(regCars.length){
+    const lbl2 = el('p','section-divider'); lbl2.textContent='Regular cars (+1 pt each)'; div.appendChild(lbl2);
+    const regGrid = el('div','special-btns');
+    regCars.forEach(car=>{
+      const b = el('div','special-btn');
+      b.style.cssText='padding:14px 12px;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.1)';
+      b.innerHTML='<div class="car-label" style="color:var(--text)">'+car.name+'</div><div class="pts-label">+'+car.pts+' pts</div>';
+      b.onclick=()=>awardPlayer(car,false);
+      regGrid.appendChild(b);
+    });
+    div.appendChild(regGrid);
+  }
+
+  // player buttons
+  const lbl3 = el('p','section-divider'); lbl3.textContent='Tap who spotted it'; div.appendChild(lbl3);
+  const pbgrid = el('div','player-btns');
+  pbgrid.style.gridTemplateColumns = state.players.length>=3 ? '1fr 1fr' : '1fr';
+  state.players.forEach(p=>{
+    const b = el('button','player-btn');
+    b.setAttribute('data-player',p.name);
+    b.textContent=p.name;
+    b.onclick=()=>{
+      if(!state.pendingCar)return alert('First tap a car, then tap a player!');
+      const car=state.pendingCar, isSpecial=state.pendingSpecial;
+      p.pts+=car.pts;
+      if(isSpecial)p.specials++;
+      state.pendingCar=null; state.pendingSpecial=false;
+      // flash
+      b.innerHTML=p.name+'<div class="flash"></div>';
+      setTimeout(()=>render(),400);
+    };
+    pbgrid.appendChild(b);
+  });
+  div.appendChild(pbgrid);
+
+  // deduct
+  const lbl4 = el('p','section-divider'); lbl4.textContent='Deduct (false call)'; div.appendChild(lbl4);
+  const ddiv = el('div','deduct-btns');
+  state.players.forEach(p=>{
+    const b = el('button','deduct-btn');
+    b.innerHTML='<span>—1 pt from <b>'+p.name+'</b></span><span>–1</span>';
+    b.onclick=()=>{p.pts=Math.max(0,p.pts-1);render()};
+    ddiv.appendChild(b);
+  });
+  div.appendChild(ddiv);
+
+  // pending car indicator
+  if(state.pendingCar){
+    const banner = el('div');
+    banner.style.cssText='position:fixed;top:0;left:0;right:0;background:var(--gold);color:#0f0f0f;text-align:center;padding:10px;font-weight:700;font-size:15px;z-index:50';
+    banner.textContent='Now tap who spotted the '+state.pendingCar.name+'!';
+    div.appendChild(banner);
+  }
+
+  // end modal
+  if(state.showEndModal) div.appendChild(endModal());
+
+  return div;
+
+  function awardPlayer(car, isSpecial){
+    state.pendingCar=car; state.pendingSpecial=isSpecial; render();
+  }
+};
+
+function endModal(){
+  const sorted=[...state.players].sort((a,b)=>b.pts-a.pts);
+  const winner=sorted[0];
+  const ov = el('div','modal-overlay');
+  ov.onclick=e=>{if(e.target===ov){state.showEndModal=false;render()}};
+  const m = el('div','modal');
+  m.innerHTML='<h2>Game Over!</h2><p>Here\'s how everyone did</p>';
+  const mw = el('div','modal-winner');
+  mw.innerHTML='<div class="trophy">🏆</div><div class="name">'+winner.name+'</div><div class="pts">'+winner.pts+' points</div>';
+  m.appendChild(mw);
+  const ms = el('div','modal-scores');
+  sorted.forEach((p,i)=>{
+    const row = el('div','modal-score-row');
+    row.innerHTML='<span>'+(i===0?'🥇':i===1?'🥈':'🥉')+' '+p.name+'</span><span>'+p.pts+' pts</span>';
+    ms.appendChild(row);
+  });
+  m.appendChild(ms);
+  m.appendChild(btn('Save & Return Home','btn-primary',()=>{
+    saveGameToLeaderboard();
+    state.screen='home';
+    state.showEndModal=false;
+    render();
+  }));
+  m.appendChild(btn('Keep Playing','btn-secondary',()=>{state.showEndModal=false;render()}));
+  ov.appendChild(m);
+  return ov;
+}
+
+function saveGameToLeaderboard(){
+  state.players.forEach(p=>{
+    const existing = state.leaderboard.find(e=>e.name===p.name);
+    if(existing){existing.pts+=p.pts; existing.specials+=p.specials; existing.games++;}
+    else state.leaderboard.push({name:p.name,pts:p.pts,specials:p.specials,games:1});
+  });
+  save();
+}
+
+// ─── LEADERBOARD ──────────────────────────────────────────────────────────────
+screens.leaderboard = () => {
+  const div = el('div','lb-screen screen');
+  div.appendChild(navBar('Leaderboard',()=>{state.screen='home';render()}));
+  const sorted=[...state.leaderboard].sort((a,b)=>b.pts-a.pts);
+  if(!sorted.length){
+    const empty=el('div','lb-empty'); empty.textContent='No games played yet. Start a new game!';
+    div.appendChild(empty);
+    return div;
+  }
+  const hero=el('div','lb-hero');
+  hero.innerHTML='<h2>All-Time Rankings</h2><p>'+sorted.length+' player'+(sorted.length>1?'s':'')+' · never resets</p>';
+  div.appendChild(hero);
+  sorted.forEach((p,i)=>{
+    const cls='lb-entry'+(i===0?' first':i===1?' second':i===2?' third':'');
+    const row=el('div',cls);
+    const rankEl=el('span','lb-rank'); rankEl.textContent=i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1);
+    const info=el('div','lb-info');
+    info.innerHTML='<div class="lb-name">'+p.name+'</div><div class="lb-meta">'+p.games+' game'+(p.games>1?'s':'')+' · ⭐ '+p.specials+' special car'+(p.specials!==1?'s':'')+' spotted</div>';
+    const ptsEl=el('div','lb-pts');
+    ptsEl.innerHTML='<div class="big">'+p.pts+'</div><div class="small">pts</div>';
+    row.appendChild(rankEl); row.appendChild(info); row.appendChild(ptsEl);
+    div.appendChild(row);
+  });
+  return div;
+};
+
+// ─── EDIT ─────────────────────────────────────────────────────────────────────
+screens.edit = () => {
+  const div = el('div','edit-screen screen');
+  div.appendChild(navBar('Edit Cars',()=>{save();state.screen='home';render()}));
+  const lbl=el('p','section-label'); lbl.textContent='Points per car'; div.appendChild(lbl);
+  state.cars.forEach(car=>{
+    const row=el('div','car-edit-row');
+    const nm=el('span','car-edit-name'); nm.textContent=car.name+(car.special?' ⭐':'');
+    const ptsRow=el('div','car-edit-pts');
+    const minus=el('button','pts-btn'); minus.textContent='−'; minus.onclick=()=>{if(car.pts>1)car.pts--;render()};
+    const val=el('span','pts-val'); val.textContent=car.pts;
+    const plus=el('button','pts-btn'); plus.textContent='+'; plus.onclick=()=>{car.pts++;render()};
+    const specToggle=el('button','pts-btn'); specToggle.textContent='⭐'; specToggle.title='Toggle special';
+    specToggle.style.cssText='width:auto;padding:0 10px;font-size:14px;'+(car.special?'background:rgba(232,184,75,0.2);border-color:var(--gold)':'');
+    specToggle.onclick=()=>{car.special=!car.special;render()};
+    ptsRow.appendChild(minus); ptsRow.appendChild(val); ptsRow.appendChild(plus); ptsRow.appendChild(specToggle);
+    row.appendChild(nm); row.appendChild(ptsRow);
+    div.appendChild(row);
+  });
+  const savBtn=btn('Save & Back','btn-primary',()=>{save();state.screen='home';render()});
+  savBtn.style.cssText='margin-top:20px;margin-bottom:32px;width:100%';
+  div.appendChild(savBtn);
+  return div;
+};
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function el(tag, cls){
+  const e=document.createElement(tag);
+  if(cls)e.className=cls;
+  return e;
+}
+function btn(text, cls, onclick){
+  const b=document.createElement('button');
+  b.className=cls; b.textContent=text; b.onclick=onclick;
+  return b;
+}
+function navBar(title, back){
+  const nav=el('div','nav-bar');
+  const b=el('button','nav-back'); b.innerHTML='← Back'; b.onclick=back;
+  const t=el('span','nav-title'); t.textContent=title;
+  nav.appendChild(b); nav.appendChild(t);
+  return nav;
+}
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
