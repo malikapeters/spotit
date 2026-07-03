@@ -182,12 +182,12 @@ const DEFAULT_CARS = [
   {id:'porsche',name:'Porsche',pts:3,special:true},
   {id:'ferrari',name:'Ferrari',pts:3,special:true},
   {id:'lambo',name:'Lamborghini',pts:3,special:true},
+  {id:'hilux',name:'Toyota Hilux',pts:1,special:false},
+  {id:'ranger',name:'Ford Ranger',pts:1,special:false},
+  {id:'mini',name:'Mini Cooper',pts:2,special:false},
   {id:'bmw',name:'BMW',pts:1,special:false},
-  {id:'audi',name:'Audi',pts:1,special:false},
-  {id:'golf_gti',name:'Golf GTI',pts:1,special:false},
   {id:'mercedes',name:'Mercedes',pts:1,special:false},
-  {id:'hilux',name:'Hilux',pts:2,special:false},
-  {id:'Ford',name:'Ford',pts:2,special:false},
+  {id:'audi',name:'Audi',pts:1,special:false},
 ];
 
 let state = {
@@ -283,8 +283,7 @@ function processVoiceCommand(transcript){
   const car = findBestMatch(transcript, state.gameCars, c=>c.name);
 
   if(player && car){
-    player.pts += car.pts;
-    if(car.special) player.specials++;
+    awardPoints(player, car, car.special);
     showVoiceToast('✓ '+player.name+' +'+car.pts+' pt'+(car.pts>1?'s':'')+' — '+car.name, 'success');
     if(navigator.vibrate) navigator.vibrate(60);
     render();
@@ -435,8 +434,38 @@ screens.setup = () => {
   });
   pl.appendChild(playerList);
 
+  const knownPlayers = getKnownPlayerNames().filter(n=>
+    !state.setupPlayers.some(sp=>sp.trim().toLowerCase()===n.trim().toLowerCase())
+  );
+  if(knownPlayers.length){
+    const selWrap = el('div');
+    selWrap.style.cssText='margin-bottom:10px';
+    const selLbl = el('p');
+    selLbl.style.cssText='font-size:13px;color:var(--text2);margin-bottom:8px';
+    selLbl.textContent='Played before? Pick them here to avoid duplicates:';
+    const select = el('select');
+    select.style.cssText='width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:15px;padding:14px 16px;outline:none;font-family:var(--font)';
+    const placeholderOpt = document.createElement('option');
+    placeholderOpt.value=''; placeholderOpt.textContent='Select a returning player…';
+    select.appendChild(placeholderOpt);
+    knownPlayers.forEach(n=>{
+      const opt=document.createElement('option'); opt.value=n; opt.textContent=n;
+      select.appendChild(opt);
+    });
+    select.onchange=()=>{
+      const val=select.value;
+      if(val && !state.setupPlayers.some(sp=>sp.trim().toLowerCase()===val.trim().toLowerCase())){
+        state.setupPlayers.push(val);
+        render();
+      }
+    };
+    selWrap.appendChild(selLbl);
+    selWrap.appendChild(select);
+    pl.appendChild(selWrap);
+  }
+
   const addRow = el('div','add-row');
-  const inp = el('input'); inp.type='text'; inp.placeholder='Add player name';
+  const inp = el('input'); inp.type='text'; inp.placeholder='Or add a new player name';
   inp.value=state.setupInput;
   inp.oninput=e=>state.setupInput=e.target.value;
   inp.onkeydown=e=>{if(e.key==='Enter')addPlayer()};
@@ -467,7 +496,7 @@ screens.setup = () => {
   function addPlayer(){
     const n=state.setupInput.trim();
     if(!n)return;
-    if(state.setupPlayers.includes(n))return;
+    if(state.setupPlayers.some(p=>p.trim().toLowerCase()===n.toLowerCase()))return;
     state.setupPlayers.push(n);
     state.setupInput='';
     render();
@@ -476,7 +505,7 @@ screens.setup = () => {
   function startGame(){
     if(state.setupPlayers.length<1)return alert('Add at least one player!');
     if(!state.cars.some(c=>c.inGame))return alert('Select at least one car!');
-    state.players=state.setupPlayers.map(n=>({name:n,pts:0,specials:0}));
+    state.players=state.setupPlayers.map(n=>({name:n,pts:0,specials:0,history:[]}));
     state.gameCars=state.cars.filter(c=>c.inGame);
     state.screen='game'; render();
   }
@@ -551,8 +580,7 @@ screens.game = () => {
     b.onclick=()=>{
       if(!state.pendingCar)return alert('First tap a car, then tap a player!');
       const car=state.pendingCar, isSpecial=state.pendingSpecial;
-      p.pts+=car.pts;
-      if(isSpecial)p.specials++;
+      awardPoints(p, car, isSpecial);
       state.pendingCar=null; state.pendingSpecial=false;
       // flash
       b.innerHTML=p.name+'<div class="flash"></div>';
@@ -562,13 +590,20 @@ screens.game = () => {
   });
   div.appendChild(pbgrid);
 
-  // deduct
-  const lbl4 = el('p','section-divider'); lbl4.textContent='Deduct (false call)'; div.appendChild(lbl4);
+  // undo (false call) — reverses each player's most recent specific award
+  const lbl4 = el('p','section-divider'); lbl4.textContent='Undo (wrong car)'; div.appendChild(lbl4);
   const ddiv = el('div','deduct-btns');
   state.players.forEach(p=>{
+    const last = p.history && p.history.length ? p.history[p.history.length-1] : null;
     const b = el('button','deduct-btn');
-    b.innerHTML='<span>—1 pt from <b>'+p.name+'</b></span><span>–1</span>';
-    b.onclick=()=>{p.pts=Math.max(0,p.pts-1);render()};
+    if(last){
+      b.innerHTML='<span>Undo <b>'+p.name+'</b> — '+last.carName+(last.special?' ⭐':'')+'</span><span>−'+last.pts+'</span>';
+      b.onclick=()=>{undoLastAward(p);render()};
+    } else {
+      b.innerHTML='<span>'+p.name+' — nothing to undo</span><span>—</span>';
+      b.style.opacity='0.4';
+      b.style.cursor='default';
+    }
     ddiv.appendChild(b);
   });
   div.appendChild(ddiv);
@@ -629,17 +664,50 @@ function endModal(){
     render();
   }));
   m.appendChild(btn('Keep Playing','btn-secondary',()=>{state.showEndModal=false;render()}));
+  const discardBtn = btn('Discard Game (don\'t save)','btn-secondary btn-danger',()=>{
+    if(!confirm('Discard this game? Nobody\'s points from this game will be saved to the leaderboard.'))return;
+    state.screen='home';
+    state.showEndModal=false;
+    state.players=[];
+    state.gameCars=[];
+    state.pendingCar=null;
+    render();
+  });
+  discardBtn.style.marginTop='8px';
+  m.appendChild(discardBtn);
   ov.appendChild(m);
   return ov;
 }
 
 function saveGameToLeaderboard(){
   state.players.forEach(p=>{
-    const existing = state.leaderboard.find(e=>e.name===p.name);
+    const existing = state.leaderboard.find(e=>e.name.trim().toLowerCase()===p.name.trim().toLowerCase());
     if(existing){existing.pts+=p.pts; existing.specials+=p.specials; existing.games++;}
-    else state.leaderboard.push({name:p.name,pts:p.pts,specials:p.specials,games:1});
+    else state.leaderboard.push({name:p.name.trim(),pts:p.pts,specials:p.specials,games:1});
   });
   save();
+}
+
+function getKnownPlayerNames(){
+  return state.leaderboard.map(p=>p.name).sort((a,b)=>a.localeCompare(b));
+}
+
+// ─── SCORING HISTORY ───────────────────────────────────────────────────────
+// Every award is recorded per-player so a wrong call (e.g. "Ferrari" tapped
+// instead of "BYD") can be undone precisely — right car, right points, right
+// special-status — rather than just knocking off a flat 1 point.
+function awardPoints(player, car, isSpecial){
+  player.pts += car.pts;
+  if(isSpecial) player.specials++;
+  if(!player.history) player.history=[];
+  player.history.push({carName:car.name, pts:car.pts, special:!!isSpecial});
+}
+
+function undoLastAward(player){
+  if(!player.history || !player.history.length) return;
+  const last = player.history.pop();
+  player.pts = Math.max(0, player.pts - last.pts);
+  if(last.special) player.specials = Math.max(0, player.specials - 1);
 }
 
 // ─── LEADERBOARD ──────────────────────────────────────────────────────────────
